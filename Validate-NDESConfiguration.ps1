@@ -1745,6 +1745,30 @@ New-Item -ItemType Directory -Path $TempDirPath -Force | Out-Null
 [PSCustomObject[]]$ResultBlob = @()
 [bool]$isadmin = Test-IsAdmin
 
+
+# ✅ OS Type Check: Ensure script runs only on Windows Server
+try {
+    $osInfo = Get-CimInstance Win32_OperatingSystem
+    $productType = $osInfo.ProductType
+    $caption = $osInfo.Caption
+
+    New-LogEntry "Detected OS: $caption (ProductType: $productType)" -Severity 1
+
+    if ($productType -ne 3) {
+        $msg = "This script is intended to run only on Windows Server. Detected: $caption. Exiting..."
+        New-LogEntry $msg -Severity 3
+        Write-Host $msg -ForegroundColor Red
+        exit
+    }
+}
+catch {
+    $msg = "Unable to determine OS type. Exiting for safety."
+    New-LogEntry $msg -Severity 3
+    Write-Host $msg -ForegroundColor Red
+    exit
+}
+
+
 # Flag to query computer vs user properties from AD
 [bool]$SvcAcctIsComputer = $false
 $line = "." * 60
