@@ -1636,207 +1636,56 @@ function Get-CSVInfo {
 
 
 function New-HTMLReport {
-   
-    <#
-  .SYNOPSIS
-   Generates HTML report
-  .DESCRIPTION
-   Creates HTML output based on rule results
-  .EXAMPLE
-  New-HTMLReport 
-   
-  .NOTES
-  NAME: New-HTMLReport 
-  #>
-  
-    Param () 
-    
+    param (
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject[]]$resultBlob
+    )
+
     $head = @'
-  <style>
-  body { background-color:#ffffff;
-         font-family:Tahoma;
-         font-size:12pt; }
-  table {
-    border-spacing: 0;
-    width: 100%;
-    border: 1px solid #ddd;
-    margin: auto;
-  }
-  th {
-    background-color: #6495ED;
-    cursor: pointer;
-  }
-  th, td {
-    border: 1px solid #ddd;
-    text-align: left;
-    padding: 10px;
-  }
-  td.green { color: green; }
-  td.orange { color: orange; }
-  td.red { color: red; }
-  .active { 
-    color: #efefef;
-    font-style: italic;
-  }
-  .filterList {
-    border: 1px solid #ddd;
-    display: inline-block;
-    margin: 4px 0px;
-    padding: 8px;
-  }
-  .filterList h4 {
-    margin: 0px 2px;
-  }
-  </style>
+    <style>
+    body { background-color:#ffffff; font-family:Tahoma; font-size:12pt; }
+    table { border-spacing: 0; width: 100%; border: 1px solid #ddd; margin: auto; }
+    th { background-color: #6495ED; cursor: pointer; }
+    th, td { border: 1px solid #ddd; text-align: left; padding: 10px; }
+    td.green { color: green; }
+    td.orange { color: orange; }
+    td.red { color: red; }
+    .active { color: #efefef; font-style: italic; }
+    </style>
 '@
-  
-    $preContent = @'
-  <h1>NDES Validation Results</h1>
-   
-'@
-  
+
+    $preContent = "<h1>NDES Validation Results</h1>"
+
     $script = @'
-  <script>
-  window.onload = function() {
-    if (document.querySelectorAll('tr th').length != 0) {
-      const headings = document.querySelectorAll('tr th');
-      const col = Array.from(headings).find(hd => hd.innerHTML === "Test Result");
-      const inx = Array.from(col.parentNode.children).indexOf(col);
-      const cells = col.closest('table').querySelectorAll(`td:nth-child(${inx+1})`);
+    <script>
+    window.onload = function() {
+        const headings = document.querySelectorAll('tr th');
+        const col = Array.from(headings).find(hd => hd.innerHTML === "Test Result");
+        const inx = Array.from(col.parentNode.children).indexOf(col);
+        const cells = col.closest('table').querySelectorAll(`td:nth-child(${inx+1})`);
+        Array.from(cells).forEach(td => {
+            switch (td.innerHTML.trim()) {
+                case "Passed": td.classList.add("green"); break;
+                case "Warning": td.classList.add("orange"); break;
+                case "Failed": td.classList.add("red"); break;
+            }
+        });
     }
-    
-  
-      Array.from(cells).map((td) => {
-          switch (td.innerHTML) {
-              case "Passed":
-                  td.classList.add("green")
-                  break
-              case "Warning":
-                  td.classList.add("orange")
-                  break
-              case "Failed":
-                  td.classList.add("red")
-                  break
-          }
-      })
-      
-      Array.from(headings).map((hd) => {
-        hd.addEventListener('click', (e) => {
-          sortTable(e.target.cellIndex)
-          activeColumn(e)
-        })
-      })
-       
-  }
-  
-  function activeColumn(e) {
-    const headings = document.querySelectorAll('tr th')
-    const col = Array.from(headings).map(hd => hd.classList.remove('active'))
-    e.target.classList.add('active')
-  }
-  
-  function sortTable(n) {
-    var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-    table = document.querySelector('table')
-    switching = true;
-    //Set the sorting direction to ascending:
-    dir = "asc"; 
-    /*Make a loop that will continue until
-    no switching has been done:*/
-    while (switching) {
-      //start by saying: no switching is done:
-      switching = false;
-      rows = table.rows;
-      /*Loop through all table rows (except the
-      first, which contains table headers):*/
-      for (i = 1; i < (rows.length - 1); i++) {
-        //start by saying there should be no switching:
-        shouldSwitch = false;
-        /*Get the two elements you want to compare,
-        one from current row and one from the next:*/
-        x = rows[i].getElementsByTagName("TD")[n];
-        y = rows[i + 1].getElementsByTagName("TD")[n];
-        /*check if the two rows should switch place,
-        based on the direction, asc or desc:*/
-        if (dir == "asc") {
-          if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-            //if so, mark as a switch and break the loop:
-            shouldSwitch= true;
-            break;
-          }
-        } else if (dir == "desc") {
-          if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-            //if so, mark as a switch and break the loop:
-            shouldSwitch = true;
-            break;
-          }
-        }
-      }
-      if (shouldSwitch) {
-        /*If a switch has been marked, make the switch
-        and mark that a switch has been done:*/
-        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-        switching = true;
-        //Each time a switch is done, increase this count by 1:
-        switchcount ++;      
-      } else {
-        /*If no switching has been done AND the direction is "asc",
-        set the direction to "desc" and run the while loop again.*/
-        if (switchcount == 0 && dir == "asc") {
-          dir = "desc";
-          switching = true;
-        }
-      }
-    }
-  }
-  
-  function filterTable() {
-  
-    const checkboxes = document.querySelectorAll('input[name="filter"]:checked')
-    const table = document.querySelector('table')
-    const headings = table.querySelectorAll('tr th')
-    const col = Array.from(headings).find(hd => hd.innerHTML === "Test Result")
-    const inx = Array.from(col.parentNode.children).indexOf(col)
-    const trs = table.querySelectorAll('tr')
-  
-    const filters = Array.from(checkboxes).map(chbx => chbx.value )
-  
-    if (filters.length === 0) {
-      resetTableRows(trs)
-    }
-    else {
-      Array.from(trs).map((tr) => {
-        let td = tr.querySelectorAll('td')[inx]
-        if (td) {
-          if (filters.includes(td.innerHTML.toLowerCase())) {
-            // display row
-            tr.style.display = ""
-          }
-          else {
-            // hide row
-            tr.style.display = "none"
-          }
-        }
-      })
-    }
-  
-  }
-  
-  function resetTableRows(trs) {
-    // reset rows for all to display
-    Array.from(trs).map((tr) => {
-      tr.style.display = ""
-    })
-  }
-  </script>
+    </script>
 '@
-    $html = $ResultBlob | ConvertTo-Html -Head $head -Body $script -PreContent $preContent
+
+    # Filter out empty or malformed entries
+    $filteredBlob = $resultBlob | Where-Object {
+        $_.'Test Name' -and $_.'Test Result' -and $_.'Test Name'.Trim() -ne "" -and $_.'Test Result'.Trim() -ne ""
+    }
+
+    $html = $filteredBlob | ConvertTo-Html -Head $head -Body $script -PreContent $preContent
     $now = (Get-Date).ToString("ddMMyyyyhhmmss")
     $HTMLFileName = Join-Path $pwd "Validate-NDESConfiguration-$now.html"
     $html | Out-File -FilePath $HTMLFileName -Force
-    $HTMLFileName
-  
+    return $HTMLFileName
 }
+
 function New-TestResult {
 
     <#
