@@ -12,6 +12,17 @@ or while in Test Phase ( Updated by Thiago Beier 2025-06-09 ) Straight from http
         Invoke-WebRequest https://raw.githubusercontent.com/thiagogbeier/Validate-NDESConfiguration/refs/heads/main/Validate-NDESConfiguration.ps1 -OutFile NDESValidator.ps1
         PowerShell -ExecutionPolicy Bypass -File .\NDESValidator.ps1
 
+_Server has Intune Certificate Connector with MSA_
+
+<img src="ndes-gmsa.jpeg" width="600" />
+
+_Server has Intune Certificate Connector with Local Service Account_
+
+<img src="ndes-localaccount.jpeg" width="600" />
+
+_Server has not Intune Certificate Connector fully installed_
+
+<img src="ndes-notInstalled.jpeg" width="600" />
 
 (Hint: You can copy and paste the commands from this page and paste them directly in to the PowerShell window.
 
