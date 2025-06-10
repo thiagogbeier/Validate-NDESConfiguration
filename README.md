@@ -14,15 +14,15 @@ or while in Test Phase ( Updated by Thiago Beier 2025-06-09 ) Straight from http
 
 _Server has Intune Certificate Connector with MSA_
 
-<img src="ndes-gmsa.jpeg" width="600" />
+<img src="ndes-gmsa.png" width="600" />
 
 _Server has Intune Certificate Connector with Local Service Account_
 
-<img src="ndes-localaccount.jpeg" width="600" />
+<img src="ndes-localaccount.png" width="600" />
 
 _Server has not Intune Certificate Connector fully installed_
 
-<img src="ndes-notInstalled.jpeg" width="600" />
+<img src="ndes-notInstalled.png" width="600" />
 
 (Hint: You can copy and paste the commands from this page and paste them directly in to the PowerShell window.
 
