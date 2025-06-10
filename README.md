@@ -5,8 +5,13 @@ Validate-NDES Configuration is a support script to validate the on-premises Netw
 To run this tool, open an elevated PowerShell window (right-click, "Run as administrator..."), create a temporary folder, then run these three commands:
 
          wget https://aka.ms/NDESValidatorPS1  -outfile NDESValidator.ps1
-         wget https://aka.ms/NDESValidatorcsv -outfile ResultMessages.csv
          PowerShell -ExecutionPolicy Bypass -File .\NDESValidator.ps1
+
+or while in Test Phase ( Updated by Thiago Beier 2025-06-09 ) Straight from https://github.com/thiagogbeier/Validate-NDESConfiguration GitHub repo
+
+        Invoke-WebRequest https://raw.githubusercontent.com/thiagogbeier/Validate-NDESConfiguration/refs/heads/main/Validate-NDESConfiguration.ps1 -OutFile NDESValidator.ps1
+        PowerShell -ExecutionPolicy Bypass -File .\NDESValidator.ps1
+
 
 (Hint: You can copy and paste the commands from this page and paste them directly in to the PowerShell window.
 
