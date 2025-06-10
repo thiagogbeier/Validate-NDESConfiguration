@@ -933,7 +933,7 @@ function Test-ServerCertificate {
 }
 
 Function Test-EntraAppProxy {
-    #Checks if SSL cert binding to IIS has .msappproxy.net in its URL
+    #Checks if SSL cert binding to IIS has .msappproxy.net in its URL and test its connection, EXPECTING a 403 Forbidden response.
     $script:DNSNameList | ForEach-Object {
         if ($_ -like "*msappproxy.net*") {
             $url = "https://$_/certsrv/mscep/mscep.dll/"
