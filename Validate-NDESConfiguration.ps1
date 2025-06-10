@@ -891,7 +891,7 @@ function Test-ServerCertificate {
          
         New-LogEntry "If this NDES server is in your perimeter network, please ensure the external hostname is shown below:"
         $DNSNameList = $ServerCertObject.DNSNameList.unicode
-         
+        $script:DNSNameList = $DNSNameList
         New-LogEntry "Internal and External hostnames: "
         New-LogEntry "$($DNSNameList)"
         New-LogEntry "Certificate bound in IIS is valid. Subject:$($ServerCertObject.Subject)|Thumbprint:$($ServerCertObject.Thumbprint)|ValidUntil:$($ServerCertObject.NotAfter)|Internal and ExternalHostnames:$($DNSNameList)" -Severity 1
@@ -931,6 +931,41 @@ function Test-ServerCertificate {
 "@ -Severity 3
     }
 }
+
+Function Test-EntraAppProxy {
+    #Checks if SSL cert binding to IIS has .msappproxy.net in its URL
+    $script:DNSNameList | ForEach-Object {
+        if ($_ -like "*msappproxy.net*") {
+            $url = "https://$_/certsrv/mscep/mscep.dll/"
+            try {
+                $response = Invoke-WebRequest -Uri $url -UseBasicParsing -ErrorAction Stop
+                $msg = "SUCCESS: $url responded with status code $($response.StatusCode)"
+                New-LogEntry $msg -Severity 1
+                return New-TestResult -TestName "Test-EntraAppProxy" -Result "Passed" -MoreInformation $msg
+            }
+            catch {
+                if ($_.Exception.Response.StatusCode.value__ -eq 403) {
+                    #$msg = "EXPECTED: $url returned 403 Forbidden"
+                    $msg = "$url"
+                    $script:EntraAppProxyurlDNSName = $url
+                    New-LogEntry $msg -Severity 1
+                    return New-TestResult -TestName "Test-EntraAppProxy" -Result "Passed" -MoreInformation $msg
+                }
+                else {
+                    $msg = "ERROR: $url returned $($_.Exception.Message)"
+                    New-LogEntry $msg -Severity 3
+                    return New-TestResult -TestName "Test-EntraAppProxy" -Result "Failed" -MoreInformation $msg
+                }
+            }
+        }
+        else {
+            $msg = "Entra App Proxy CNAME not found in SSL CERT for $_"
+            New-LogEntry $msg -Severity 3
+            return New-TestResult -TestName "Test-EntraAppProxy" -Result "Warning" -MoreInformation $msg
+        }
+    }
+}
+
 
 function Test-ClientCertificate { 
     New-LogEntry "Checking encrypting certificate is valid for use..." -Severity 1
@@ -1018,6 +1053,50 @@ function Test-InternalNdesUrl {
         Write-Output "An unexpected error occurred"
     }
 }
+function Test-ExternalNdesUrl {
+    # Extract hostname from full URL
+    try {
+        $uri = [System.Uri]$script:EntraAppProxyurlDNSName
+        $hostname = $uri.Host
+    }
+    catch {
+        New-LogEntry "Invalid URL format in EntraAppProxyurlDNSName: $script:EntraAppProxyurlDNSName" -Severity 3
+        return
+    }
+
+    Write-StatusMessage "Checking behaviour of external NDES URL at https://$hostname/certsrv/mscep/mscep.dll" -Severity 1
+
+    $url = "https://$hostname/certsrv/mscep/mscep.dll"
+
+    try {
+        $response = Invoke-WebRequest -Uri $url -UseBasicParsing
+        Write-StatusMessage "$($response.StatusCode)"
+    }
+    catch [System.Net.WebException] {
+        $webResponse = $_.Exception.Response
+        if ($webResponse -ne $null) {
+            $statusCode = [int]$webResponse.StatusCode
+            if ($statusCode -eq 403) {
+                $msg = "URL Response is 403 - Intune NDES External URL is responsive"
+                New-LogEntry $msg -Severity 1
+            }
+            else {
+                $msg = "URL response $statusCode : Unexpected Error code. This usually signifies an error with the Intune Connector registering itself or not being installed.
+                     Expected value is a 403. We received a $statusCode. This could be down to a missing reboot after the policy module installation. 
+                     Verify last boot time and module install time further down the validation." 
+                New-LogEntry $msg -Severity 3
+            }
+        }
+        else {
+            Write-Output "Error: Unable to reach $url"
+        }
+    }
+    catch {
+        Write-Output "An unexpected error occurred"
+    }
+}
+
+
 function Test-LastBootTime {
       
     Write-StatusMessage "Checking last boot time of the server" -Severity 1
@@ -1854,6 +1933,8 @@ $ResultsText = @{
     "Test-HTTPParamsRegKeys"                  = @{ Passed = "Passed"; Failed = "Failed" }
     "Test-IIS_IUSR_Membership"                = @{ Passed = "Passed"; Failed = "Failed" }
     "Test-PFXCertificateConnectorPermissions" = @{ Passed = "Passed"; Failed = "Failed" }
+    "Test-EntraAppProxy"                      = @{ Passed = "Passed"; Failed = "Failed" }
+    "Test-ExternalNdesUrl"                    = @{ Passed = "Passed"; Failed = "Failed" } #not in use
 }
 
 
@@ -1884,9 +1965,9 @@ else {
 if ($NDESServiceAccount -eq "" -or $null -eq $NDESServiceAccount) {
     $NDESServiceAccount = Get-NDESServiceAcct
 }
+
 #Test-Variables
 #$ResultsText = Get-CSVInfo -fileName ".\ResultMessages.csv" #updated by the following array
-
 
 
 $ResultBlob += Test-IsNDESInstalled
@@ -1915,7 +1996,9 @@ $ResultBlob += Test-SPN -ADAccount $NDESServiceAccount
 $ResultBlob += Test-IIS_IUSR_Membership
 $ResultBlob += Test-IIS_Log
 $ResultBlob += Get-TCAInfo
-$ResultBlob += Get-IntuneServices 
+$ResultBlob += Get-IntuneServices
+$ResultBlob += Test-EntraAppProxy
+#$ResultBlob += Test-ExternalNdesUrl #not in use
 
 if ($isadmin) {
     Get-EventLogData
@@ -1943,6 +2026,7 @@ $ResultBlob | Out-File -FilePath .\Validate-NDESConfig-Testresults.txt -Encoding
 if (Test-Path $HTMLFileName) {
     Start-Process $HTMLFileName
 }
+ 
  
 #endregion 
  
