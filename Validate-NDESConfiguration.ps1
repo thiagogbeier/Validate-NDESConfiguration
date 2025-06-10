@@ -1746,7 +1746,7 @@ New-Item -ItemType Directory -Path $TempDirPath -Force | Out-Null
 [bool]$isadmin = Test-IsAdmin
 
 
-# ✅ OS Type Check: Ensure script runs only on Windows Server
+# ✅ OS Type Check: Ensure script runs only on Windows Server (ProductType 2 or 3)
 try {
     $osInfo = Get-CimInstance Win32_OperatingSystem
     $productType = $osInfo.ProductType
@@ -1754,7 +1754,7 @@ try {
 
     New-LogEntry "Detected OS: $caption (ProductType: $productType)" -Severity 1
 
-    if ($productType -ne 3) {
+    if ($productType -eq 1) {
         $msg = "This script is intended to run only on Windows Server. Detected: $caption. Exiting..."
         New-LogEntry $msg -Severity 3
         Write-Host $msg -ForegroundColor Red
@@ -1767,6 +1767,7 @@ catch {
     Write-Host $msg -ForegroundColor Red
     exit
 }
+
 
 
 # Flag to query computer vs user properties from AD
